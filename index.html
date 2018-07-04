@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <title></title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    #app {
+      width: 600px;
+      margin: 10px auto;
+    }
+
+    .tb {
+      border-collapse: collapse;
+      width: 100%;
+    }
+
+    .tb th {
+      background-color: #0094ff;
+      color: white;
+    }
+
+    .tb td,
+    .tb th {
+      padding: 5px;
+      border: 1px solid black;
+      text-align: center;
+    }
+
+    .add {
+      padding: 5px;
+      border: 1px solid black;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+
+<body>
+ <div id="app">
+    <div class="add">
+        品牌名称:
+        <input  v-focus v-model.trim="value" type="text">
+        <!-- trim去空格  disabled 禁止按钮 -->
+        <input :disabled="this.value.length === 0 ? true : false"  @click = "handleAdd" type="button" value="添加">
+      </div>
+    
+      <div class="add">
+        品牌名称:
+        <input v-model ="selectValue" type="text" placeholder="请输入搜索条件">
+      </div>
+    
+      <div>
+        <table class="tb">
+          <tr>
+            <th>编号</th>
+            <th>品牌名称</th>
+            <th>创立时间</th>
+            <th>操作</th>
+          </tr>
+          <!-- 循环是 v-for 大哥 -->
+          <tr :key="item.id" v-for="(item, index) in list">
+            <td>{{index + 1}}</td>
+            <td> {{item.name}} </td>
+            <td>{{item.date | getDate('YYY-MM-DD HH:MM:SS')}}</td>
+            <td>
+              <a href="#" @click.prevent="handleDelete(item.id)" >删除</a>
+            </td>
+          </tr>
+          <tr v-if="list.length === 0">
+            <td colspan="4">没有品牌数据</td>
+          </tr>
+        </table>
+      </div>
+ </div>
+ <script src="vue.js"></script>
+ <script src="axios.js"></script>
+ <script src="moment.js"></script>
+ <script>
+   // 自定义指令 焦点事件 
+   Vue.directive('focus', {
+     inserted: (el, binding)=>{
+       el.focus()
+       el.value = binding.value
+     }
+   })
+   // 过滤器  格式化日期
+   Vue.filter('getDate', (v, mstring)=>{
+     return moment(v).format(mstring)
+   })
+    var vm = new Vue({
+      el: '#app',
+      data: {
+        list: [],
+        value:'',
+        selectValue:'',
+      },
+      // 侦听
+      watch : {
+        selectValue(newValue,oldValue) {
+          // 查找  侦听数据  拼接 模糊查询 name_like
+          // 要给据先哈寻到的数据渲染 
+          
+          axios
+            // .get('http://localhost:3000/brands?name_like=' + newValue)
+            .get(`http://localhost:3000/brands?name_like=${newValue}`)
+            .then((res)=>{
+              this.list = res.data
+            })
+            .catch((err)=>{
+              console.log(err)
+            })
+        }
+      },
+      //挂载
+      mounted() {
+        this.handle()
+      },
+      //处理函数
+      methods: {
+        //  删除操作 发送delete  发送请求中带有数据  拼接 或者模板(`地址+id`)  注意地址 
+        handleDelete(id){
+          // 判断是否删除
+          if (!confirm('确定删除么')) {
+            return
+          }
+          axios
+            // .delete('http://localhost:3000/brands/'+ id)
+            .delete(`http://localhost:3000/brands/${id}`)
+            .then((res)=>{
+              if (res.status === 200) {
+                this.handle()
+              } else {
+                alert(删除失败)
+              }
+            })
+            .catch((err)=>{
+              console.log(err)
+            })
+        },
+        handleAdd(){
+          if (this.value.length === 0) {
+            alert('请填写数据')
+            return
+          }
+          axios
+            .post('http://localhost:3000/brands', {
+              name: this.value,
+              date: new Date()
+            })
+            .then((res)=>{
+              if (res.status === 201) {
+                this.handle()
+              } else {
+                alert('添加失败')
+              }
+            })
+            .catch((err)=>{
+              console.log(err)
+            })
+        },
+        handle(){
+          axios
+            .get('http://localhost:3000/brands')
+            .then((res)=>{
+              this.list = res.data
+            })
+            .catch((err)=>{
+              console.log(err)
+            })
+        }     
+      }
+    })
+ </script>
+</body>
+</html>
